@@ -17,15 +17,24 @@ import org.elasticsearch.index.query.QueryBuilder;
 import org.elasticsearch.index.query.QueryBuilders;
 import org.elasticsearch.search.SearchHit;
 import org.elasticsearch.search.SearchHits;
+import org.elasticsearch.search.aggregations.Aggregation;
+import org.elasticsearch.search.aggregations.AggregationBuilders;
+import org.elasticsearch.search.aggregations.Aggregations;
+import org.elasticsearch.search.aggregations.bucket.terms.Terms;
 import org.elasticsearch.search.fetch.subphase.highlight.HighlightBuilder;
 import org.elasticsearch.search.fetch.subphase.highlight.HighlightField;
 import org.elasticsearch.search.sort.SortOrder;
+import org.elasticsearch.search.suggest.Suggest;
+import org.elasticsearch.search.suggest.SuggestBuilder;
+import org.elasticsearch.search.suggest.SuggestBuilders;
+import org.elasticsearch.search.suggest.completion.CompletionSuggestion;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.util.CollectionUtils;
 
 import java.io.IOException;
+import java.util.List;
 import java.util.Map;
 
 import static cn.itcast.hotel.constants.HotelConstants.MAPPING_TEMPLATE;
@@ -127,6 +136,54 @@ public class HotelSearchTest {
         SearchResponse response = client.search(request, RequestOptions.DEFAULT);
 
         handleResponse(response);
+    }
+
+    @Test
+    void testAggregation() throws IOException {
+        SearchRequest request = new SearchRequest("hotel");
+
+        request.source().size(0);
+
+        request.source().aggregation(AggregationBuilders
+                .terms("brandAgg")
+                .field("brand")
+                .size(20)
+        );
+
+        SearchResponse response = client.search(request, RequestOptions.DEFAULT);
+
+        //System.out.println("response = " + response);
+        Aggregations aggregations = response.getAggregations();
+        Terms brandTerms = aggregations.get("brandAgg");
+        List<? extends Terms.Bucket> buckets = brandTerms.getBuckets();
+        for (Terms.Bucket bucket : buckets) {
+            String key = bucket.getKeyAsString();
+            System.out.println(key);
+        }
+    }
+
+    @Test
+    void testSuggest() throws IOException {
+        SearchRequest request = new SearchRequest("hotel");
+
+        request.source().suggest(new SuggestBuilder().addSuggestion(
+                "suggestions",
+                SuggestBuilders.completionSuggestion("suggestion")
+                        .prefix("h")
+                        .skipDuplicates(true)
+                        .size(10)
+        ));
+
+        SearchResponse response = client.search(request, RequestOptions.DEFAULT);
+
+        //System.out.println(response);
+        Suggest suggest = response.getSuggest();
+        CompletionSuggestion suggestions =  suggest.getSuggestion("suggestions");
+        List<CompletionSuggestion.Entry.Option> options = suggestions.getOptions();
+        for (CompletionSuggestion.Entry.Option option : options) {
+            String text = option.getText().string();
+            System.out.println(text);
+        }
     }
 
     @BeforeEach
