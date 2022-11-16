@@ -6,6 +6,12 @@ spring:
     username: root
     password: 123456
     driver-class-name: com.mysql.jdbc.Driver
+  rabbitmq:
+    host: 81.69.250.15
+    port: 5672
+    username: chu
+    password: 123321
+    virtual-host: /
 logging:
   level:
     cn.itcast: debug
